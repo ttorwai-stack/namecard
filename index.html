@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>디지털 명함</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root { --bg:#eef2f7; --card:#fff; --text:#1c2733; --sub:#5b6b7b; --accent:#2457d6; --line:#e3e8ef; --field:#f6f8fb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#10151c; --card:#1a222d; --text:#eef2f7; --sub:#9aa8b8; --accent:#6c97ff; --line:#2a3544; --field:#222c39; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+         min-height:100vh; display:flex; justify-content:center; padding:24px 16px; }
+  .card { width:100%; max-width:420px; background:var(--card); border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.12); overflow:hidden; align-self:flex-start; }
+  .hidden { display:none !important; }
+  .head { background:var(--accent); color:#fff; padding:28px 24px 22px; }
+  .org { font-size:14px; opacity:.85; }
+  .name { font-size:30px; font-weight:700; margin:6px 0 2px; }
+  .title { font-size:15px; opacity:.9; }
+  .body { padding:20px 24px; }
+  .row { display:flex; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+  .row:last-child { border-bottom:0; }
+  .label { width:52px; flex:none; color:var(--sub); font-size:13px; }
+  .row a, .row span.v { color:var(--text); text-decoration:none; font-size:16px; word-break:break-all; }
+  .row a { color:var(--accent); }
+  .qrwrap { text-align:center; padding:8px 24px 20px; }
+  #qr { display:inline-block; background:#fff; padding:12px; border-radius:12px; border:1px solid var(--line); }
+  #qr img { display:block; width:210px; height:210px; image-rendering:pixelated; }
+  .hint { font-size:13px; color:var(--sub); margin-top:10px; }
+  .actions { display:flex; gap:10px; padding:0 24px 24px; }
+  button { flex:1; padding:14px; border-radius:12px; border:0; font-size:15px; font-weight:600; cursor:pointer; }
+  .primary { background:var(--accent); color:#fff; }
+  .ghost { background:transparent; color:var(--accent); border:1.5px solid var(--accent); }
+  /* 입력 폼 */
+  form { padding:24px; }
+  form h1 { font-size:20px; margin:0 0 4px; }
+  form p { color:var(--sub); font-size:13px; margin:0 0 16px; line-height:1.5; }
+  label { display:block; font-size:13px; color:var(--sub); margin:12px 0 4px; }
+  input, textarea { width:100%; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--field); color:var(--text); font-size:16px; font-family:inherit; }
+  .two { display:flex; gap:10px; } .two > div { flex:1; }
+  form .actions { padding:20px 0 0; }
+</style>
+</head>
+<body>
+<main class="card">
+
+  <!-- 처음 열었을 때 / 편집 -->
+  <form id="form" class="hidden" autocomplete="off">
+    <h1>내 명함 만들기</h1>
+    <p>입력한 정보는 <b>이 휴대폰의 브라우저에만</b> 저장되며 서버로 전송되지 않습니다.</p>
+    <div class="two">
+      <div><label for="lastName">성</label><input id="lastName" required></div>
+      <div><label for="firstName">이름</label><input id="firstName" required></div>
+    </div>
+    <label for="org">소속</label><input id="org">
+    <label for="dept">부서</label><input id="dept">
+    <label for="title">직함</label><input id="title">
+    <label for="phone">휴대폰</label><input id="phone" type="tel" inputmode="tel">
+    <label for="tel">사무실 전화</label><input id="tel" type="tel" inputmode="tel">
+    <label for="email">이메일</label><input id="email" type="email">
+    <label for="url">홈페이지</label><input id="url" type="url">
+    <label for="address">주소</label><input id="address">
+    <label for="note">메모</label><textarea id="note" rows="2"></textarea>
+    <div class="actions">
+      <button type="button" class="ghost hidden" id="cancel">취소</button>
+      <button type="submit" class="primary">저장</button>
+    </div>
+  </form>
+
+  <!-- 명함 -->
+  <section id="view" class="hidden">
+    <div class="head">
+      <div class="org" id="vOrg"></div>
+      <div class="name" id="vName"></div>
+      <div class="title" id="vTitle"></div>
+    </div>
+    <div class="body" id="rows"></div>
+    <div class="qrwrap">
+      <div id="qr"></div>
+      <div class="hint">휴대폰 카메라로 QR을 찍으면<br>연락처 저장 화면이 열립니다</div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="save">연락처 파일(.vcf)</button>
+      <button class="ghost" id="edit">정보 수정</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const KEY = "namecard.v1";
+const FIELDS = ["lastName","firstName","org","dept","title","phone","tel","email","url","address","note"];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/([\\;,])/g, "\\$1").replace(/\n/g, "\\n");
+const text = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
+function store(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { alert("이 브라우저에서는 저장할 수 없습니다. (사생활 보호 모드인지 확인해 주세요)"); } }
+
+function buildVcard(m) {
+  const full = m.lastName + m.firstName;
+  const L = ["BEGIN:VCARD", "VERSION:3.0", `N:${esc(m.lastName)};${esc(m.firstName)};;;`, `FN:${esc(full)}`];
+  if (m.org || m.dept) L.push(`ORG:${esc(m.org)}${m.dept ? ";" + esc(m.dept) : ""}`);
+  if (m.title)   L.push(`TITLE:${esc(m.title)}`);
+  if (m.phone)   L.push(`TEL;TYPE=CELL:${m.phone}`);
+  if (m.tel)     L.push(`TEL;TYPE=WORK:${m.tel}`);
+  if (m.email)   L.push(`EMAIL:${m.email}`);
+  if (m.url)     L.push(`URL:${m.url}`);
+  if (m.address) L.push(`ADR;TYPE=WORK:;;${esc(m.address)};;;;`);
+  if (m.note)    L.push(`NOTE:${esc(m.note)}`);
+  L.push("END:VCARD");
+  return L.join("\r\n");
+}
+
+function showForm(m) {
+  FIELDS.forEach(f => $(f).value = (m && m[f]) || "");
+  $("cancel").classList.toggle("hidden", !m);
+  $("view").classList.add("hidden");
+  $("form").classList.remove("hidden");
+}
+
+function showCard(m) {
+  const full = m.lastName + m.firstName;
+  const vcard = buildVcard(m);
+  document.title = full + " 명함";
+  $("vOrg").textContent = [m.org, m.dept].filter(Boolean).join(" · ");
+  $("vName").textContent = full;
+  $("vTitle").textContent = m.title;
+  const rows = [
+    ["휴대폰", m.phone, "tel:" + m.phone.replace(/[^\d+]/g, "")],
+    ["전화", m.tel, "tel:" + m.tel.replace(/[^\d+]/g, "")],
+    ["이메일", m.email, "mailto:" + m.email],
+    ["홈페이지", m.url, m.url],
+    ["주소", m.address, null]
+  ].filter(r => r[1]);
+  $("rows").innerHTML = rows.map(([l, v, href]) =>
+    `<div class="row"><span class="label">${l}</span>` +
+    (href && /^(tel:|mailto:|https?:)/i.test(href) ? `<a href="${text(href)}">${text(v)}</a>` : `<span class="v">${text(v)}</span>`) + `</div>`
+  ).join("");
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
+  const qr = qrcode(0, "M");
+  qr.addData(vcard);
+  qr.make();
+  $("qr").innerHTML = qr.createImgTag(6, 0);
+
+  $("save").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([vcard], { type: "text/vcard;charset=utf-8" }));
+    a.download = full + ".vcf";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  $("edit").onclick = () => showForm(m);
+  $("form").classList.add("hidden");
+  $("view").classList.remove("hidden");
+}
+
+$("form").onsubmit = e => {
+  e.preventDefault();
+  const m = {};
+  FIELDS.forEach(f => m[f] = $(f).value.trim());
+  store(m);
+  showCard(m);
+};
+$("cancel").onclick = () => { const m = load(); if (m) showCard(m); };
+
+const saved = load();
+saved && saved.lastName ? showCard(saved) : showForm(null);
+</script>
+</body>
+</html>
