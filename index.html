@@ -25,17 +25,16 @@
   .bc-wrap { padding:20px 16px 8px; background:var(--card); }
   .bc { position:relative; aspect-ratio:91/55; background:#fbfbf8; color:#33363d; border-radius:6px; overflow:hidden;
         box-shadow:0 2px 14px rgba(0,0,0,.22); font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif; container-type:inline-size; }
-  .bc svg.deco { position:absolute; inset:0; width:100%; height:100%; }
   .bc > div { position:absolute; }
   .bc .bc-org { right:5%; top:10%; text-align:right; font-weight:700; font-size:5.6cqw; color:#2f3138; letter-spacing:-.02em; }
   .bc .bc-dept { right:5%; top:22%; font-size:2.6cqw; color:#6a6f7a; text-align:right; }
-  .bc .bc-name { left:17%; top:23%; font-size:8cqw; font-weight:700; letter-spacing:.35em; color:#33363d; white-space:nowrap; }
-  .bc .bc-title { left:17.5%; top:41%; font-size:4cqw; font-weight:700; color:#4d5b82; }
-  .bc .bc-rows { left:17.5%; top:58%; font-size:3.6cqw; line-height:1.5; }
+  .bc .bc-name { left:7%; top:23%; font-size:8cqw; font-weight:700; letter-spacing:.35em; color:#33363d; white-space:nowrap; }
+  .bc .bc-title { left:7.5%; top:41%; font-size:4cqw; font-weight:700; color:#4d5b82; }
+  .bc .bc-rows { left:7.5%; top:58%; font-size:3.6cqw; line-height:1.5; }
   .bc .bc-rows div { display:flex; gap:3.5cqw; white-space:nowrap; }
   .bc .bc-rows b { width:3cqw; font-weight:700; color:#33363d; }
   .bc .bc-rows a { color:#4a4d55; text-decoration:none; }
-  .bc .bc-foot { left:17%; right:6%; bottom:4.5%; font-size:2.8cqw; color:#4a4d55; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bc .bc-foot { left:7%; right:6%; bottom:4.5%; font-size:2.8cqw; color:#4a4d55; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .bc .bc-foot b { color:#2f3138; }
   .bc-extra { padding:6px 24px 0; font-size:14px; line-height:1.7; word-break:break-all; }
   .bc-extra a { color:var(--accent); text-decoration:none; }
@@ -207,16 +206,6 @@ function parseLink(hash) {
 }
 
 /* ---------- 렌더 ---------- */
-const DECO = `<svg class="deco" viewBox="0 0 910 550" preserveAspectRatio="none" aria-hidden="true">
-  <line x1="30" y1="200" x2="170" y2="-10" stroke="#dcdcdf" stroke-width="95" stroke-linecap="round"/>
-  <circle cx="200" cy="0" r="42" fill="#c3cde3"/>
-  <line x1="40" y1="520" x2="120" y2="400" stroke="#a9b6d6" stroke-width="60" stroke-linecap="round"/>
-  <polygon points="910,430 910,550 690,550" fill="#4b5675"/>
-  <circle cx="840" cy="490" r="48" fill="#c9ccd6" opacity=".85"/>
-  <path d="M600 550 A120 120 0 0 1 800 550Z" fill="#c4a99c"/>
-  <g fill="#555"><rect x="760" y="338" width="14" height="10"/><rect x="782" y="338" width="14" height="10"/><rect x="804" y="338" width="14" height="10"/><rect x="826" y="338" width="14" height="10"/><rect x="848" y="338" width="14" height="10"/><rect x="870" y="338" width="14" height="10"/>
-  <rect x="760" y="356" width="14" height="10"/><rect x="782" y="356" width="14" height="10"/><rect x="804" y="356" width="14" height="10"/><rect x="826" y="356" width="14" height="10"/><rect x="848" y="356" width="14" height="10"/><rect x="870" y="356" width="14" height="10"/></g>
-</svg>`;
 function renderCard(m, el) {
   const tl = n => n.replace(/[^\d+]/g, "");
   const rows = [
@@ -226,7 +215,7 @@ function renderCard(m, el) {
   ].filter(r => r[1]);
   const foot = [m.org && `<b>${text(m.org)}</b>`, m.address && text(m.address)].filter(Boolean).join(" | ");
   const extra = [["홈페이지", m.url, /^https?:/i.test(m.url) ? m.url : null], ["메모", m.note, null]].filter(r => r[1]);
-  el.innerHTML = `<div class="bc-wrap"><div class="bc">${DECO}` +
+  el.innerHTML = `<div class="bc-wrap"><div class="bc">` +
     `<div class="bc-org">${text(m.org)}</div><div class="bc-dept">${text(m.dept)}</div>` +
     `<div class="bc-name">${text(fullName(m))}</div><div class="bc-title">${text(m.title)}</div>` +
     `<div class="bc-rows">${rows.map(([k, v, h]) => `<div><b>${k}</b><a href="${text(h)}">${text(v)}</a></div>`).join("")}</div>` +
