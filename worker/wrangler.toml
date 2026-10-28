@@ -1,0 +1,7 @@
+name = "namecard-ocr"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# 앱을 올린 주소로 바꾸세요. (예: https://내아이디.github.io)
+ALLOWED_ORIGIN = "https://example.github.io"
