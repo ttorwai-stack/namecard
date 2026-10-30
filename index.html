@@ -8,7 +8,7 @@
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>디지털 명함</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="qrcode.js"></script>
 <style>
   :root { --bg:#eef2f7; --card:#fff; --text:#1c2733; --sub:#5b6b7b; --accent:#2457d6; --line:#e3e8ef; --field:#f6f8fb; --warn:#c2410c; }
   @media (prefers-color-scheme: dark) {
@@ -264,11 +264,13 @@ function showMineForm(m) {
 }
 function drawQr(m) {
   const data = qrMode === "vcf" ? buildVcard(m) : cardLink(m);
-  qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
   let qr = null;
-  for (const ec of ["M", "L"]) {                 // 링크·내용이 길면 오류정정 수준을 낮춰 재시도
-    try { qr = qrcode(0, ec); qr.addData(data); qr.make(); break; } catch (e) { qr = null; }
-  }
+  try {
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
+    for (const ec of ["M", "L"]) {               // 링크·내용이 길면 오류정정 수준을 낮춰 재시도
+      try { qr = qrcode(0, ec); qr.addData(data); qr.make(); break; } catch (e) { qr = null; }
+    }
+  } catch (e) {}
   $("qr").innerHTML = qr ? qr.createImgTag(6, 0) : "<div class='hint'>내용이 너무 길어 QR을 만들 수 없습니다. 메모를 줄여 주세요.</div>";
   $("qrHint").innerHTML = qrMode === "vcf"
     ? "휴대폰 카메라로 QR을 찍으면<br>연락처 저장 화면이 열립니다"
