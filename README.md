@@ -3,7 +3,9 @@
 명함 촬영 → OCR → 보정(학습) → 보관 / 내 명함 QR·링크 공유. 서버는 OCR 중계용 Worker 하나뿐입니다.
 
 ## 구성
-- `index.html` `sw.js` `manifest.webmanifest` `icon.svg` — 정적 PWA (GitHub Pages 등에 그대로 올리면 됨)
+- `index.html` `sw.js` `manifest.webmanifest` `icon.svg` — 내 전용 정적 PWA (GitHub Pages 등에 그대로 올리면 됨)
+- `c.html` — 받는 사람 전용 페이지. 링크 QR/공유 링크가 열며 '연락처 저장'·'이미지 저장'만 제공 (앱 기능·저장 없음)
+- `card.js` `card.css` — 앱과 c.html이 공유하는 명함 렌더링/vCard/링크/이미지 코드
 - `worker/` — Claude 비전으로 명함을 읽는 Cloudflare Worker (API 키 보관)
 
 ## 배포

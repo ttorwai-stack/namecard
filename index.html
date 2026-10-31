@@ -8,7 +8,9 @@
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>디지털 명함</title>
+<link rel="stylesheet" href="card.css">
 <script src="qrcode.js"></script>
+<script src="card.js"></script>
 <style>
   :root { --bg:#eef2f7; --card:#fff; --text:#1c2733; --sub:#5b6b7b; --accent:#2457d6; --line:#e3e8ef; --field:#f6f8fb; --warn:#c2410c; }
   @media (prefers-color-scheme: dark) {
@@ -22,25 +24,6 @@
   nav { display:flex; border-bottom:1px solid var(--line); }
   nav button { flex:1; padding:14px 0; background:none; border:0; border-radius:0; color:var(--sub); font-size:14px; font-weight:600; border-bottom:2px solid transparent; }
   nav button.on { color:var(--accent); border-bottom-color:var(--accent); }
-  .bc-wrap { padding:14px 16px 22px; background:var(--card); }
-  .bc { position:relative; aspect-ratio:91/55; container-type:inline-size; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between;
-        padding:6cqw 6cqw 5cqw 8.5cqw; border-radius:12px; color:#1f2a44; border:1px solid #e3e7ef;
-        background:linear-gradient(150deg,#ffffff 0%,#f2f4f9 100%); box-shadow:0 6px 20px rgba(20,30,60,.16);
-        font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
-  .bc::before { content:""; position:absolute; left:0; top:0; bottom:0; width:2.2cqw; background:#1f2a44; }
-  .bc-org { font-size:4.3cqw; font-weight:700; letter-spacing:-.02em; line-height:1.2; }
-  .bc-dept { font-size:2.8cqw; color:#6b7385; margin-top:.8cqw; letter-spacing:.02em; }
-  .bc-id { display:flex; align-items:baseline; gap:3cqw; flex-wrap:wrap; }
-  .bc-name { font-size:9cqw; font-weight:800; letter-spacing:.22em; line-height:1.1; }
-  .bc-title { font-size:3.8cqw; font-weight:600; color:#4562a8; }
-  .bc-rows { border-top:1px solid #d6dbe7; padding-top:2.6cqw; font-size:3.7cqw; line-height:1.6; }
-  .bc-rows div { display:flex; align-items:baseline; gap:3cqw; white-space:nowrap; }
-  .bc-rows b { width:4cqw; font-weight:700; color:#4562a8; font-size:3.2cqw; }
-  .bc-rows a { color:#1f2a44; text-decoration:none; overflow:hidden; text-overflow:ellipsis; }
-  .bc-foot { font-size:2.7cqw; color:#6b7385; margin-top:1.4cqw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .bc-extra { padding:6px 24px 0; font-size:14px; line-height:1.7; word-break:break-all; }
-  .bc-extra a { color:var(--accent); text-decoration:none; }
-  .bc-extra span { color:var(--sub); margin-right:8px; font-size:13px; }
   .qrwrap { text-align:center; padding:8px 24px 16px; }
   #qr { display:inline-block; background:#fff; padding:10px; border-radius:12px; border:1px solid var(--line); }
   #qr img { display:block; width:min(190px,26vh); height:min(190px,26vh); image-rendering:pixelated; }
@@ -68,7 +51,6 @@
   #preview { width:100%; border-radius:12px; margin-bottom:12px; display:block; }
   .msg { font-size:13px; color:var(--sub); margin:10px 0 0; line-height:1.5; }
   .msg:empty { display:none; }
-  #sharedView .actions { padding-top:6px; }
   .msg.err { color:var(--warn); }
   .item { padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; }
   .item b { font-size:16px; } .item small { display:block; color:var(--sub); font-size:13px; margin-top:2px; }
@@ -153,16 +135,6 @@
     <div class="msg" id="libMsg"></div>
   </section>
 
-  <!-- 링크로 받은 명함 -->
-  <section id="sharedView" class="hidden">
-    <div class="card-render"></div>
-    <div class="actions">
-      <button class="primary" id="sSave">연락처에 저장</button>
-      <button class="ghost" id="sLib">보관함에 담기</button>
-    </div>
-    <div class="msg" id="sMsg" style="padding:0 24px 12px"></div>
-    <div class="actions"><button class="ghost" id="sHome">내 명함 만들기</button></div>
-  </section>
 </main>
 
 <script>
@@ -174,74 +146,11 @@ const DEFS = [
   ["phone","휴대폰","tel"],["tel","사무실 전화","tel"],["email","이메일","email"],["url","홈페이지","url"],
   ["address","주소"],["note","메모","area"]
 ];
-const FIELDS = DEFS.map(d => d[0]);
+if (DEFS.map(d => d[0]).join() !== FIELDS.join()) throw new Error("필드 정의가 card.js와 다릅니다");
 
-const esc  = s => String(s).replace(/([\\;,])/g, "\\$1").replace(/\n/g, "\\n");
-const text = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 const read  = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { alert("이 브라우저에서는 저장할 수 없습니다. (사생활 보호 모드인지 확인해 주세요)"); return false; } };
-const fullName = m => m.lastName + m.firstName;
-const blank = () => Object.fromEntries(FIELDS.map(f => [f, ""]));
 
-/* ---------- vCard / 링크 ---------- */
-function buildVcard(m) {
-  const L = ["BEGIN:VCARD", "VERSION:3.0", `N:${esc(m.lastName)};${esc(m.firstName)};;;`, `FN:${esc(fullName(m))}`];
-  if (m.org || m.dept) L.push(`ORG:${esc(m.org)}${m.dept ? ";" + esc(m.dept) : ""}`);
-  if (m.title)   L.push(`TITLE:${esc(m.title)}`);
-  if (m.phone)   L.push(`TEL;TYPE=CELL:${m.phone}`);
-  if (m.tel)     L.push(`TEL;TYPE=WORK:${m.tel}`);
-  if (m.email)   L.push(`EMAIL:${m.email}`);
-  if (m.url)     L.push(`URL:${m.url}`);
-  if (m.address) L.push(`ADR;TYPE=WORK:;;${esc(m.address)};;;;`);
-  if (m.note)    L.push(`NOTE:${esc(m.note)}`);
-  L.push("END:VCARD");
-  return L.join("\r\n");
-}
-function download(name, content) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], { type: "text/vcard;charset=utf-8" }));
-  a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-}
-function b64u(bytes) { let s = ""; bytes.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
-function unb64u(str) { const s = atob(str.replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(s, c => c.charCodeAt(0)); }
-function cardLink(m) {
-  const arr = FIELDS.map(f => m[f] || "");
-  return location.origin + location.pathname + "#c=" + b64u(new TextEncoder().encode(JSON.stringify(arr)));
-}
-function parseLink(hash) {
-  try {
-    const arr = JSON.parse(new TextDecoder().decode(unb64u(hash.slice(3))));
-    const m = blank(); FIELDS.forEach((f, i) => m[f] = String(arr[i] || ""));
-    return m.lastName || m.firstName ? m : null;
-  } catch (e) { return null; }
-}
-
-/* ---------- 렌더 ---------- */
-// 숫자만 입력된 전화번호를 보기 좋게 (이미 하이픈·기호가 있으면 그대로)
-function fmtPhone(n) {
-  if (!/^\d+$/.test(n)) return n;
-  let m;
-  if ((m = n.match(/^(02)(\d{3,4})(\d{4})$/)) || (m = n.match(/^(0\d{2})(\d{3,4})(\d{4})$/))) return `${m[1]}-${m[2]}-${m[3]}`;
-  if ((m = n.match(/^(1\d{3})(\d{4})$/))) return `${m[1]}-${m[2]}`;
-  return n;
-}
-function renderCard(m, el, compact) {
-  const tl = n => n.replace(/[^\d+]/g, "");
-  const rows = [
-    ["T", m.tel, "tel:" + tl(m.tel), fmtPhone(m.tel)],
-    ["M", m.phone, "tel:" + tl(m.phone), fmtPhone(m.phone)],
-    ["E", m.email, "mailto:" + m.email, m.email],
-    ["W", m.url, m.url, m.url.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "")]
-  ].filter(r => r[1]);
-  const memo = !compact && m.note ? `<div class="bc-extra"><span>메모</span>${text(m.note)}</div>` : "";
-  el.innerHTML = `<div class="bc-wrap"><div class="bc">` +
-    `<div><div class="bc-org">${text(m.org)}</div>${m.dept ? `<div class="bc-dept">${text(m.dept)}</div>` : ""}</div>` +
-    `<div class="bc-id"><div class="bc-name">${text(fullName(m))}</div><div class="bc-title">${text(m.title)}</div></div>` +
-    `<div><div class="bc-rows">${rows.map(([k, , h, v]) => `<div><b>${k}</b>${/^(tel:|mailto:|https?:)/i.test(h) ? `<a href="${text(h)}">${text(v)}</a>` : `<a>${text(v)}</a>`}</div>`).join("")}</div>` +
-    `${m.address ? `<div class="bc-foot">${text(m.address)}</div>` : ""}</div>` +
-    `</div></div>` + memo;
-}
 function fieldsHtml(p) {
   let out = "", i = 0;
   while (i < DEFS.length) {
@@ -263,7 +172,7 @@ document.querySelectorAll("form .fields").forEach(el => el.innerHTML = fieldsHtm
 
 /* ---------- 탭 ---------- */
 function show(ids) {
-  ["mineView","mineForm","scanPane","libPane","infoPane","sharedView"].forEach(id => $(id).classList.toggle("hidden", !ids.includes(id)));
+  ["mineView","mineForm","scanPane","libPane","infoPane"].forEach(id => $(id).classList.toggle("hidden", !ids.includes(id)));
 }
 function setNav(t) {
   $("nav").classList.remove("hidden");
@@ -448,25 +357,10 @@ $("exportAll").onclick = () => {
   download("namecards.vcf", lib.map(buildVcard).join("\r\n"));
 };
 
-/* ---------- 링크로 받은 명함 ---------- */
-function showShared(m) {
-  $("nav").classList.add("hidden");
-  document.title = fullName(m) + " 명함";
-  renderCard(m, document.querySelector("#sharedView .card-render"));
-  $("sSave").onclick = () => download(fullName(m) + ".vcf", buildVcard(m));
-  $("sLib").onclick = () => {
-    const lib = read(LIB, []);
-    if (lib.some(x => fullName(x) === fullName(m) && x.phone === m.phone && x.email === m.email)) { $("sMsg").textContent = "이미 보관함에 있습니다."; return; }
-    lib.unshift({ ...m, id: Date.now().toString(36), t: Date.now() });
-    if (write(LIB, lib)) $("sMsg").textContent = "보관함에 담았습니다.";
-  };
-  $("sHome").onclick = () => { history.replaceState(null, "", location.pathname); tab("mine"); };
-  show(["sharedView"]);
-}
-
 /* ---------- 시작 ---------- */
-const shared = location.hash.startsWith("#c=") ? parseLink(location.hash) : null;
-shared ? showShared(shared) : tab("mine");
+// 예전 방식의 공유 링크(#c=)는 받는 사람 전용 페이지로 넘깁니다.
+if (location.hash.startsWith("#c=")) location.replace(new URL("c.html", location.href).href + location.hash);
+else tab("mine");
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>

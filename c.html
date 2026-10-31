@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1f2a44">
+<link rel="icon" href="icon.svg">
+<title>명함</title>
+<link rel="stylesheet" href="card.css">
+<style>
+  :root { --bg:#eef2f7; --card:#fff; --text:#1c2733; --sub:#5b6b7b; --accent:#2457d6; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10151c; --card:#1a222d; --text:#eef2f7; --sub:#9aa8b8; --accent:#6c97ff; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+         min-height:100vh; display:flex; justify-content:center; padding:12px 16px; }
+  main { width:100%; max-width:420px; background:var(--card); border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.12); overflow:hidden; align-self:flex-start; padding-bottom:6px; }
+  .actions { display:flex; gap:10px; padding:6px 24px 14px; }
+  button { flex:1; padding:14px; border-radius:12px; border:0; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .primary { background:var(--accent); color:#fff; }
+  .ghost { background:transparent; color:var(--accent); border:1.5px solid var(--accent); }
+  .note { padding:0 24px 14px; font-size:12px; color:var(--sub); line-height:1.5; text-align:center; }
+  .err { padding:40px 24px; text-align:center; color:var(--sub); line-height:1.6; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script src="card.js"></script>
+<script>
+const m = location.hash.startsWith("#c=") ? parseLink(location.hash) : null;
+const app = document.getElementById("app");
+if (!m) {
+  app.innerHTML = '<div class="err">명함 정보를 불러올 수 없습니다.<br>링크가 잘렸거나 올바르지 않습니다.<br>보낸 사람에게 다시 요청해 주세요.</div>';
+} else {
+  document.title = fullName(m) + " 명함";
+  app.innerHTML = '<div id="card"></div><div class="actions"><button class="primary" id="vcf">연락처에 저장</button><button class="ghost" id="img">이미지로 저장</button></div>' +
+    '<div class="note">링크에 담긴 명함 정보를 보여 주는 페이지입니다. 정보는 이 기기에서만 표시되며 서버에 저장되지 않습니다.</div>';
+  renderCard(m, document.getElementById("card"));
+  document.getElementById("vcf").onclick = () => download(fullName(m) + ".vcf", buildVcard(m));
+  document.getElementById("img").onclick = () => saveCardImage(m);
+}
+</script>
+</body>
+</html>
